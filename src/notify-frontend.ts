@@ -29,23 +29,24 @@ export const handler = async (event: any) => {
 
   // 2. push in parallel; drop stale ones
   await Promise.allSettled(
-    Items.map(({ connectionId }) => {
+    Items.map(async ({ connectionId }) => {
       console.log(`🔗 pushing to ${connectionId}`) // log 3
-      apigw
-        .send(
+      try {
+        await apigw.send(
           new PostToConnectionCommand({
             ConnectionId: connectionId,
             Data: Buffer.from(payload)
           })
         )
-        .catch(async (err) => {
-          if (err.statusCode === 410) {
-            // GoneException
-            await ddb.send(
-              new DeleteCommand({ TableName: TABLE, Key: { connectionId } })
-            )
-          } else throw err
-        })
+        console.log(`✅ posted to ${connectionId}`)
+      } catch (err: any) {
+        console.error(`❌ ${connectionId} ${err.name} ${err.statusCode}`)
+        if (err.statusCode === 410) {
+          await ddb.send(
+            new DeleteCommand({ TableName: TABLE, Key: { connectionId } })
+          )
+        }
+      }
     })
   )
 }
