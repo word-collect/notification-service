@@ -11,6 +11,8 @@ const TABLE = process.env.TABLE_NAME!
 export const handler = async (event: any) => {
   const { connectionId, routeKey } = event.requestContext
 
+  console.log(`⚡️ ${routeKey} for ${connectionId}`) // ⇽ log 1
+
   if (routeKey === '$connect') {
     await ddb.send(
       new PutCommand({
