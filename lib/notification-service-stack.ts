@@ -71,6 +71,7 @@ export class NotificationServiceStack extends cdk.Stack {
     })
 
     const wsEndpoint = `${wsApi.apiEndpoint}/${wsStage.stageName}` // wss://…/prod
+    const managementEndpoint = `https://${wsApi.apiId}.execute-api.${this.region}.${this.urlSuffix}/${wsStage.stageName}`
 
     new ssm.StringParameter(this, 'WsEndpointParam', {
       parameterName: `/${appName}/${environment}/notification-service/ws-endpoint`,
@@ -82,7 +83,7 @@ export class NotificationServiceStack extends cdk.Stack {
       entry: 'src/notify-frontend.ts',
       environment: {
         TABLE_NAME: connections.tableName,
-        WS_ENDPOINT: wsEndpoint
+        WS_ENDPOINT: managementEndpoint
       },
       memorySize: 512,
       timeout: cdk.Duration.minutes(1)
