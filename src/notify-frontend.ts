@@ -17,9 +17,10 @@ const apigw = new ApiGatewayManagementApiClient({
 
 export const handler = async (event: any) => {
   const { userSub, ...rest } = event.detail // userSub now included
-  const payload = JSON.stringify({ userSub, ...rest })
+  const eventType = event.detailType
+  const payload = JSON.stringify({ userSub, eventType, ...rest })
 
-  console.log('📨 AnalysisReady payload', payload) // log 1
+  console.log(eventType, payload) // log 1
 
   /* 1 · fetch ONLY this user’s open connections ------------------------- */
   const { Items } = await ddb.send(
