@@ -72,8 +72,7 @@ export class NotificationServiceStack extends cdk.Stack {
       'WsLambdaAuth',
       authFn,
       {
-        // where API Gateway will look for the token on $connect
-        identitySource: ['route.request.header.Authorization']
+        identitySource: ['route.request.querystring.token']
       }
     )
 

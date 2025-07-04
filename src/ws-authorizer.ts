@@ -18,11 +18,11 @@ const verifier = CognitoJwtVerifier.create({
 })
 
 export const handler = async (event: any) => {
-  // 1 · extract the JWT (lower-case header names in WebSocket APIs)
-  const raw = event.headers?.authorization as string | undefined
+  // Grab the token from the query-string
+  const raw = event.queryStringParameters?.token
   if (!raw) return { isAuthorized: false }
 
-  const token = raw.replace(/^Bearer\s+/i, '')
+  const token = raw.startsWith('Bearer ') ? raw.slice(7) : raw
 
   try {
     // 2 · verify signature and standard claims
