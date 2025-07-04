@@ -131,11 +131,47 @@ export class NotificationServiceStack extends cdk.Stack {
     wsApi.grantManageConnections(notifyFn) // execute-api:ManageConnections
 
     /* 6 · Rule: AnalysisReady ➜ notifyFn */
+    new events.Rule(this, 'UploadReceivedRule', {
+      eventBus,
+      eventPattern: {
+        source: ['extraction-service'],
+        detailType: ['UploadReceived']
+      },
+      targets: [new targets.LambdaFunction(notifyFn)]
+    })
+
+    new events.Rule(this, 'AnalysisStartedRule', {
+      eventBus,
+      eventPattern: {
+        source: ['extraction-service'],
+        detailType: ['AnalysisStarted']
+      },
+      targets: [new targets.LambdaFunction(notifyFn)]
+    })
+
+    new events.Rule(this, 'AnalysisCompletedRule', {
+      eventBus,
+      eventPattern: {
+        source: ['extraction-service'],
+        detailType: ['AnalysisCompleted']
+      },
+      targets: [new targets.LambdaFunction(notifyFn)]
+    })
+
     new events.Rule(this, 'AnalysisReadyRule', {
       eventBus,
       eventPattern: {
         source: ['extraction-service'],
         detailType: ['AnalysisReady']
+      },
+      targets: [new targets.LambdaFunction(notifyFn)]
+    })
+
+    new events.Rule(this, 'CollectionUpdatedRule', {
+      eventBus,
+      eventPattern: {
+        source: ['collection-service'],
+        detailType: ['CollectionUpdated']
       },
       targets: [new targets.LambdaFunction(notifyFn)]
     })
