@@ -1,6 +1,6 @@
 import {
   DynamoDBDocumentClient,
-  ScanCommand,
+  QueryCommand,
   DeleteCommand
 } from '@aws-sdk/lib-dynamodb'
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb'
@@ -16,13 +16,22 @@ const apigw = new ApiGatewayManagementApiClient({
 })
 
 export const handler = async (event: any) => {
-  const payload = JSON.stringify(event.detail) // { s3Key, result }
+  const { userSub, ...rest } = event.detail // userSub now included
+  const payload = JSON.stringify({ userSub, ...rest })
+
   console.log('📨 AnalysisReady payload', payload) // log 1
 
-  // 1. fetch all live connections
+  /* 1 · fetch ONLY this user’s open connections ------------------------- */
   const { Items } = await ddb.send(
-    new ScanCommand({ TableName: TABLE, ProjectionExpression: 'connectionId' })
+    new QueryCommand({
+      TableName: TABLE,
+      IndexName: 'userSub-index', // GSI added in the stack
+      KeyConditionExpression: 'userSub = :u',
+      ExpressionAttributeValues: { ':u': userSub },
+      ProjectionExpression: 'connectionId'
+    })
   )
+
   console.log(`🔗 pushing to ${Items?.length ?? 0} connections`) // log 2
 
   if (!Items?.length) return

@@ -5,6 +5,7 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb'
 import * as lambda from 'aws-cdk-lib/aws-lambda-nodejs'
 import * as apigwv2 from 'aws-cdk-lib/aws-apigatewayv2'
 import * as integrations from 'aws-cdk-lib/aws-apigatewayv2-integrations'
+import * as apigwv2Auth from 'aws-cdk-lib/aws-apigatewayv2-authorizers'
 import * as ssm from 'aws-cdk-lib/aws-ssm'
 import * as targets from 'aws-cdk-lib/aws-events-targets'
 
@@ -39,6 +40,43 @@ export class NotificationServiceStack extends cdk.Stack {
       // timeToLiveAttribute: { attributeName: 'ttl', enabled: true }
     })
 
+    // GSI so we can later query:  SELECT connectionId WHERE userSub = :u
+    connections.addGlobalSecondaryIndex({
+      indexName: 'userSub-index',
+      partitionKey: { name: 'userSub', type: dynamodb.AttributeType.STRING }
+    })
+
+    /* --- Cognito JWT authoriser for WebSocket -------------------------------- */
+    const poolId = ssm.StringParameter.valueForStringParameter(
+      this,
+      `/${appName}/${environment}/user-service/userPoolId`
+    )
+    const clientId = ssm.StringParameter.valueForStringParameter(
+      this,
+      `/${appName}/${environment}/user-service/appClientId`
+    )
+
+    // (1)  Lambda FUNCTION that will validate the JWT
+    const authFn = new lambda.NodejsFunction(this, 'WsAuthFn', {
+      entry: 'src/ws-authorizer.ts', // you’ll implement this tiny file
+      memorySize: 128,
+      timeout: cdk.Duration.seconds(5),
+      environment: {
+        USER_POOL_ID: poolId,
+        AUDIENCE: clientId
+      }
+    })
+
+    /* (2)  Lambda AUTHORISER wrapping that function */
+    const wsAuthorizer = new apigwv2Auth.WebSocketLambdaAuthorizer(
+      'WsLambdaAuth',
+      authFn,
+      {
+        // where API Gateway will look for the token on $connect
+        identitySource: ['route.request.header.Authorization']
+      }
+    )
+
     /* 3 · $connect / $disconnect Lambda */
     const connFn = new lambda.NodejsFunction(this, 'ConnectionFn', {
       entry: 'src/ws-handler.ts',
@@ -54,7 +92,8 @@ export class NotificationServiceStack extends cdk.Stack {
         integration: new integrations.WebSocketLambdaIntegration(
           'Connect',
           connFn
-        )
+        ),
+        authorizer: wsAuthorizer
       },
       disconnectRouteOptions: {
         integration: new integrations.WebSocketLambdaIntegration(
