@@ -27,13 +27,24 @@ export const handler = async (event: any) => {
   try {
     // 2 · verify signature and standard claims
     const payload = await verifier.verify(token)
-
+    console.log('verified')
     // 3 · allow the connection and pass useful context
     return {
-      isAuthorized: true,
+      principalId: payload.sub, // anything non-empty
+      policyDocument: {
+        Version: '2012-10-17',
+        Statement: [
+          {
+            Action: 'execute-api:Invoke',
+            Effect: 'Allow',
+            Resource: event.methodArn // arn:…/$connect
+          }
+        ]
+      },
       context: {
+        // forwarded to all routes
         sub: payload.sub,
-        email: payload.email ?? ''
+        email: payload.email
       }
     }
   } catch (err) {
