@@ -16,6 +16,7 @@ const apigw = new ApiGatewayManagementApiClient({
 })
 
 export const handler = async (event: any) => {
+  console.log('EVENT-ID', event.id) // ← add this
   const { userSub, ...rest } = event.detail // userSub now included
   const eventType = event['detail-type'] ?? event.detailType ?? 'unknown'
   const payload = JSON.stringify({ userSub, eventType, ...rest })
