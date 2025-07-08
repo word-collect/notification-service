@@ -149,6 +149,15 @@ export class NotificationServiceStack extends cdk.Stack {
       targets: [new targets.LambdaFunction(notifyFn)]
     })
 
+    new events.Rule(this, 'ClassificationCompletedRule', {
+      eventBus,
+      eventPattern: {
+        source: ['extraction-service'],
+        detailType: ['ClassificationCompleted']
+      },
+      targets: [new targets.LambdaFunction(notifyFn)]
+    })
+
     new events.Rule(this, 'AnalysisCompletedRule', {
       eventBus,
       eventPattern: {
